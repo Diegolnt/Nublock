@@ -6,6 +6,7 @@ muestra las notificaciones nativas y pide los permisos. Se construye con
 `python -m nublock app install`.
 """
 
+import platform
 import plistlib
 import shutil
 import subprocess
@@ -19,6 +20,9 @@ from PIL import Image, ImageDraw
 from nublock import __version__
 
 BUNDLE_ID = "local.nublock.app"  # identificador único de la app para macOS
+# macOS mínimo: lo exige numpy (sus binarios piden 14.0). Sin `-target`, swiftc usaría la
+# versión del Mac que compila (ej. 26.0) y la app no abriría en Macs con macOS más antiguo.
+MIN_MACOS = "14.0"
 APP_NAME = "Nublock"
 SOURCE = Path(__file__).parent / "macos_app" / "Nublock.swift"
 SYSTEM_SOUNDS = Path("/System/Library/Sounds")
@@ -51,7 +55,7 @@ def info_plist(
         "CFBundlePackageType": "APPL",
         "CFBundleShortVersionString": __version__,
         "CFBundleVersion": __version__,
-        "LSMinimumSystemVersion": "11.0",
+        "LSMinimumSystemVersion": MIN_MACOS,
         "LSUIElement": True,  # sin ícono en el Dock ni menú propio
         # App Transport Security: permite HTTP solo a direcciones locales (el dashboard).
         "NSAppTransportSecurity": {"NSAllowsLocalNetworking": True},
@@ -146,6 +150,8 @@ def build_app(
                 "-O",
                 "-swift-version",
                 "5",
+                "-target",
+                f"{platform.machine()}-apple-macos{MIN_MACOS}",
                 str(SOURCE),
                 "-o",
                 str(executable_path(app)),

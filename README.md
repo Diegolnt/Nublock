@@ -32,7 +32,7 @@ cp config/config.example.yaml ~/Library/Application\ Support/nublock/config.yaml
 
 ## Instalar en otro Mac (sin terminal ni repo)
 
-En un Mac con Apple Silicon (M1 o posterior), en la terminal:
+En un Mac con Apple Silicon (M1 o posterior) y macOS 14 Sonoma o posterior, en la terminal:
 
 ```bash
 curl -fsSL https://github.com/Diegolnt/Nublock/releases/latest/download/install.sh | sh

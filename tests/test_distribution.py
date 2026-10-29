@@ -40,3 +40,11 @@ def test_install_script_verifies_checksum_and_avoids_quarantine() -> None:
     assert "shasum -a 256 -c" in text
     assert "xattr -dr com.apple.quarantine" in text
     assert "ditto -x -k" in text
+
+
+def test_app_declares_the_same_minimum_macos_it_is_compiled_for() -> None:
+    from nublock.interventions import app_bundle
+
+    assert info_plist()["LSMinimumSystemVersion"] == app_bundle.MIN_MACOS == "14.0"
+    source = Path(app_bundle.__file__).read_text()
+    assert '"-target"' in source  # sin -target, swiftc usa el macOS del Mac que compila

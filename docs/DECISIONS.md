@@ -434,3 +434,7 @@ espera mi OK") fueron reemplazadas por el goal: se implementó M0, M1 y M2 de co
      `com.apple.fileprovider.*` que `codesign` rechaza ("resource fork, Finder information, or
      similar detritus not allowed"). Además, antes de firmar: se borran `PyObjCTest` (tests de
      PyObjC) y los `.dSYM` (símbolos de debug), y `xattr -cr` limpia los atributos extendidos.
+119. **macOS mínimo = 14 (Sonoma)**: el launcher Swift se había compilado sin `-target` y heredó la
+     versión del Mac que lo compiló (macOS 26), así que no habría abierto en Macs con macOS 14 o
+     15. Ahora se compila con `-target <arch>-apple-macos14.0` y el Info.plist declara 14.0. El
+     14 lo fija numpy (sus binarios piden macOS 14.0); Python y el resto piden menos.
