@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Nublock — semana{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>Últimos 7 días</h2>
+  {% for day in days %}
+    <div class="row">
+      <span>{{ day.day.strftime("%a %d/%m") }}</span>
+      <div class="bar" style="background: transparent; display: flex; gap: 0">
+        {% for productivity in ["productive", "neutral", "distracting"] %}
+          <span class="{{ productivity }}" style="width: {{ 100 * day.seconds.get(productivity, 0) / max_total }}%" title="{{ productivity }}: {{ day.seconds.get(productivity, 0) | duration }}"></span>
+        {% endfor %}
+      </div>
+      <span>{{ day.total | duration }}</span>
+    </div>
+  {% endfor %}
+  <p class="muted">
+    <span class="pill"><span style="color: var(--productive)">■</span> productive</span>
+    <span class="pill"><span style="color: var(--neutral)">■</span> neutral</span>
+    <span class="pill"><span style="color: var(--distracting)">■</span> distracting</span>
+  </p>
+</section>
+{% endblock %}

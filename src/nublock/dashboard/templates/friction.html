@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Nublock — confirmar{% endblock %}
+{% block content %}
+<section class="card" style="max-width: 640px">
+  <h2>Modo strict</h2>
+  <p class="big" style="font-size: 22px">{{ label }}</p>
+  <p class="muted">Esto lo pediste tú: el modo strict hace que desactivar cueste un poco, para decidirlo con calma y no por impulso.</p>
+  {% if error %}<p style="color: var(--distracting)"><strong>{{ error }}</strong></p>{% endif %}
+  <p>Espera <strong id="left">{{ wait | round | int }}</strong> s y escribe exactamente:</p>
+  <p class="pill" style="font-size: 17px">{{ phrase }}</p>
+  <form method="post" action="/friction/confirm" class="controls" style="margin-top: 12px">
+    <input type="hidden" name="token" value="{{ token }}">
+    <!-- onpaste: hay que escribir la frase, no pegarla -->
+    <input name="phrase" autocomplete="off" required style="width: 320px" onpaste="return false">
+    <button id="go" class="primary" {% if wait > 0 %}disabled{% endif %}>Confirmar</button>
+    <a href="/" style="align-self: center">Mejor no</a>
+  </form>
+</section>
+<script>
+  // Cuenta regresiva (el servidor igual valida el tiempo: esto es solo visual).
+  let left = {{ wait | round | int }};
+  const label = document.getElementById("left");
+  const button = document.getElementById("go");
+  const timer = setInterval(() => {
+    left = Math.max(0, left - 1);
+    label.textContent = left;
+    if (left === 0) { button.disabled = false; clearInterval(timer); }
+  }, 1000);
+</script>
+{% endblock %}

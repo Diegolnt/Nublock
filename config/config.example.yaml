@@ -1,0 +1,124 @@
+# Nublock — config de ejemplo (macOS). Cópialo a:
+#   ~/Library/Application Support/nublock/config.yaml
+# o pásalo explícitamente con: python -m nublock --config config/config.example.yaml run
+
+general:
+  poll_interval_seconds: 1
+  idle_threshold_seconds: 120
+  data_retention_days: 90
+  store_window_titles: true
+  observe_only: true            # primera semana: true (registra pero no interviene)
+
+# --- M3/M4: cámara (attention monitor). Nada de video se guarda: solo estados. ---
+attention:
+  enabled: true
+  camera_index: 0               # 0 suele ser la FaceTime HD; con Continuity Camera puede ser el iPhone
+  process_fps: 8
+  capture_width: 1280           # resolución pedida a la cámara (el teléfono se busca a esta resolución)
+  frame_width: 640              # la cara se analiza reducida a este ancho (más rápido)
+  state_debounce_seconds: 2
+  yaw_margin_deg: 8
+  pitch_margin_deg: 6
+  hysteresis_deg: 3             # margen extra para volver a FOCUSED (evita parpadeo de estados)
+  gaze_down_threshold: 0.6      # blendshapes eyeLookDown: ojos muy abajo = LOOKING_DOWN
+  camera_retry_seconds: 10      # reintento si la cámara no está disponible
+  only_during_focus: true       # la cámara solo se enciende durante focus sessions
+  monitors: 2                   # puntos de calibración: `python -m nublock calibrate`
+  models_dir: models            # face_landmarker.task y efficientdet_lite0.tflite (ver README)
+  phone_detection:
+    enabled: true
+    fps: 2                      # solo mientras miras hacia abajo
+    min_score: 0.4              # mira el score real en `python -m nublock attention-debug`
+    model: efficientdet_lite2.tflite
+  attention_exempt:             # apps donde no se alerta y se libera la cámara (videollamadas)
+    - { process: "zoom.us" }
+    - { process: "FaceTime" }
+
+interventions:
+  grace_seconds:
+    LOOKING_AWAY: 10
+    LOOKING_DOWN: 15
+    PHONE: 3
+  escalation_seconds: [0, 10, 20]   # nivel 1 (silenciosa), 2 (con sonido), 3 (overlay, solo strict)
+  cooldown_seconds: 30
+  sound: true
+  sound_name: Glass             # cualquiera de /System/Library/Sounds
+
+# --- M2: clasificación. El orden importa: gana la primera regla que coincide. ---
+# `process` compara el nombre del ejecutable (case-insensitive). En macOS puedes verlo con:
+#   ps -axo comm | grep -i <app>
+# `title_regex` necesita el permiso Screen Recording para tu terminal (macOS).
+classification_rules:
+  - match: { process: "Code" }          # Visual Studio Code
+    productivity: productive
+    subcategory: dev
+  - match: { process: "iTerm2" }
+    productivity: productive
+    subcategory: dev
+  - match: { process: "Terminal" }
+    productivity: productive
+    subcategory: dev
+  - match: { title_regex: "(?i) - YouTube" }
+    productivity: distracting
+    subcategory: video
+  - match: { title_regex: "(?i)(instagram|tiktok|twitter|x\\.com|reddit)" }
+    productivity: distracting
+    subcategory: social
+  - match: { process: "Discord" }
+    productivity: distracting
+    subcategory: messaging
+  - match: { process: "steam_osx" }
+    productivity: distracting
+    subcategory: games
+
+# --- Reglas del usuario (M2 + M6) ---
+# action: notify (avisa) | warn (avisa y bloquea si sigues tras grace_seconds) | block (bloquea ya)
+# mode:   soft (oculta la app; desactivar es libre) | strict (cierra la app; desactivar pide fricción)
+# Con observe_only: true no se aplica ninguna (solo se registran en el log).
+rules:
+  - id: social-daily-limit
+    type: daily_limit
+    target: { subcategory: social }
+    limit_minutes: 30
+    action: block
+    mode: soft
+  - id: morning-focus
+    type: schedule
+    days: [mon, tue, wed, thu, fri]
+    start: "09:00"
+    end: "13:00"
+    target: { productivity: distracting }
+    action: warn
+    mode: strict
+    grace_seconds: 30           # para action: warn
+
+focus_session:
+  default_minutes: 50
+  break_minutes: 10
+  block_distracting: true       # avisa al abrir una app distracting durante la sesión
+  mode: soft                    # default al iniciar desde el tray: soft | strict
+
+# --- M6: bloqueo y fricción del modo strict ---
+blocking:
+  confirmation_phrase: "Elijo distraerme ahora"   # hay que escribirla (no pegarla) para desactivar algo strict
+  friction_seconds: 60
+  never_terminate: ["Google Chrome", "Safari", "firefox", "Arc", "Brave Browser", "Microsoft Edge", "Opera"]
+
+# --- M7: sitios bloqueables vía /etc/hosts (activar una vez: python -m nublock sites setup) ---
+# Se bloquean: durante focus sessions (los distracting), cuando una regla block/warn cuyo target
+# coincide con su categoría está activa (límite superado u horario), o siempre (`always: true`).
+sites:
+  - { domain: youtube.com, subcategory: video }
+  - { domain: instagram.com, subcategory: social }
+  - { domain: tiktok.com, subcategory: social }
+  - { domain: x.com, subcategory: social }
+  - { domain: twitter.com, subcategory: social }
+  - { domain: reddit.com, subcategory: social }
+site_blocking:
+  enabled: true
+  subdomains: [www, m, mobile]
+
+# --- M5: dashboard local (solo 127.0.0.1) ---
+dashboard:
+  enabled: true
+  port: 8765

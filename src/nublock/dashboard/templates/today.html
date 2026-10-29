@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}Nublock — hoy{% endblock %}
+{% block content %}
+{% set report = view.report %}
+<meta http-equiv="refresh" content="60">
+
+{% if live %}
+<section class="card">
+  <h2>Ahora</h2>
+  <p>
+    <span class="pill">Cámara: {{ "pausada" if live.camera_paused else ("activa · " ~ live.attention_state if live.camera_open else "apagada") }}</span>
+    {% if live.current_app %}<span class="pill">App: {{ live.current_app }} ({{ live.current_category }})</span>{% endif %}
+    {% if live.focus_active and live.focus_ends_at %}<span class="pill">Focus session {{ live.focus_mode }} hasta {{ live.focus_ends_at.astimezone().strftime("%H:%M") }}</span>{% endif %}
+    {% if live.on_break_until %}<span class="pill">Break hasta {{ live.on_break_until.astimezone().strftime("%H:%M") }}</span>{% endif %}
+    {% if live.paused_until %}<span class="pill">Todo pausado hasta {{ live.paused_until.astimezone().strftime("%H:%M") }}</span>{% endif %}
+    {% if live.blocked_sites %}<span class="pill">Sitios bloqueados: {{ live.blocked_sites | join(", ") }}</span>{% endif %}
+    {% if live.observe_only %}<span class="pill">observe-only</span>{% endif %}
+  </p>
+  <div class="controls">
+    {% if live.focus_active %}
+      <form class="inline" method="post" action="/focus/stop"><button>Terminar focus session</button></form>
+    {% else %}
+      <form class="inline" method="post" action="/focus/start">
+        <input type="number" name="minutes" min="1" placeholder="min" style="width:80px">
+        <select name="mode"><option value="soft">soft</option><option value="strict">strict</option></select>
+        <button class="primary">Iniciar focus session</button>
+      </form>
+    {% endif %}
+    <form class="inline" method="post" action="/camera">
+      <input type="hidden" name="paused" value="{{ 'false' if live.camera_paused else 'true' }}">
+      <button>{{ "Reanudar cámara" if live.camera_paused else "Pausar cámara" }}</button>
+    </form>
+    <form class="inline" method="post" action="/pause">
+      <input type="hidden" name="minutes" value="{{ 0 if live.paused_until else 15 }}">
+      <button>{{ "Reanudar todo" if live.paused_until else "Pausar todo 15 min" }}</button>
+    </form>
+    <form class="inline" method="post" action="/feedback/false-alarm"><button>Última alerta: falsa alarma</button></form>
+  </div>
+  {% if live.strict_active %}<p class="muted">Modo strict activo: pausar o desactivar pide esperar y escribir una frase.</p>{% endif %}
+</section>
+{% elif not running %}
+<section class="card muted">Nublock no está corriendo: estás viendo los datos guardados. Inicia el tracker con <code>python -m nublock run</code>.</section>
+{% endif %}
+
+<div class="grid">
+  <section class="card">
+    <h2>Tiempo activo hoy ({{ view.day.isoformat() }})</h2>
+    <div class="big">{{ report.active_seconds | duration }}</div>
+    <div class="muted">Idle: {{ report.idle_seconds | duration }}</div>
+  </section>
+  <section class="card">
+    <h2>Distracciones físicas</h2>
+    <div class="big">{{ view.distractions }}</div>
+    <div class="muted">
+      {% for state in ["LOOKING_AWAY", "LOOKING_DOWN", "PHONE"] %}{{ state }}: {{ view.attention_seconds.get(state, 0) | duration }}{% if not loop.last %} · {% endif %}{% endfor %}
+    </div>
+  </section>
+  <section class="card">
+    <h2>Refocus promedio</h2>
+    <div class="big">{{ (view.avg_refocus_seconds | duration) if view.avg_refocus_seconds is not none else "—" }}</div>
+    <div class="muted">{{ view.interventions | length }} interventions · {{ view.false_alarms }} falsas alarmas</div>
+  </section>
+</div>
+
+<section class="card">
+  <h2>Tiempo por categoría</h2>
+  {% for productivity in ["productive", "neutral", "distracting"] %}
+    {% set seconds = report.by_productivity.get(productivity, 0) %}
+    <div class="row">
+      <span>{{ productivity }}</span>
+      <div class="bar"><span class="{{ productivity }}" style="width: {{ (100 * seconds / report.active_seconds) if report.active_seconds else 0 }}%"></span></div>
+      <span>{{ seconds | duration }}</span>
+    </div>
+  {% endfor %}
+</section>
+
+<section class="card">
+  <h2>Timeline del día</h2>
+  <div class="timeline">
+    {% for block in view.timeline %}<span class="{{ block.kind }}" style="left: {{ block.left_pct }}%; width: {{ block.width_pct }}%" title="{{ block.label }}"></span>{% endfor %}
+  </div>
+  <div class="hours"><span>00</span><span>03</span><span>06</span><span>09</span><span>12</span><span>15</span><span>18</span><span>21</span><span>24</span></div>
+</section>
+
+<div class="grid">
+  <section class="card">
+    <h2>Top apps</h2>
+    <table>
+      {% for app in report.top_apps %}
+        <tr><td>{{ app.name }}</td><td>{{ app.seconds | duration }}</td><td class="muted">{{ app.category }}</td></tr>
+      {% else %}
+        <tr><td class="muted">Sin actividad hoy.</td></tr>
+      {% endfor %}
+    </table>
+  </section>
+  <section class="card">
+    <h2>Apps sin clasificar</h2>
+    <table>
+      {% for process, seconds in view.uncategorized %}
+        <tr>
+          <td>{{ process }}<br><span class="muted">{{ seconds | duration }}</span></td>
+          <td>
+            <form class="inline" method="post" action="/classify">
+              <input type="hidden" name="process_name" value="{{ process }}">
+              <select name="productivity">
+                <option value="productive">productive</option>
+                <option value="neutral" selected>neutral</option>
+                <option value="distracting">distracting</option>
+              </select>
+              <input name="subcategory" placeholder="subcategory" style="width:110px">
+              <button>Guardar</button>
+            </form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td class="muted">Todo clasificado.</td></tr>
+      {% endfor %}
+    </table>
+  </section>
+</div>
+
+{% if rules %}
+<section class="card">
+  <h2>Reglas</h2>
+  <table>
+    {% for rule in rules %}
+      {% set disabled_until = live.disabled_rules.get(rule.id) if live else none %}
+      <tr>
+        <td><strong>{{ rule.id }}</strong><br><span class="muted">{{ rule.summary }}</span></td>
+        <td>
+          {% if rule.limit_minutes %}
+            <div class="bar" style="width: 140px"><span class="{{ 'distracting' if rule.used_minutes >= rule.limit_minutes else 'productive' }}" style="width: {{ [100, 100 * rule.used_minutes / rule.limit_minutes] | min }}%"></span></div>
+            <span class="muted">{{ rule.used_minutes | round | int }} / {{ rule.limit_minutes | round | int }} min</span>
+          {% endif %}
+        </td>
+        <td><span class="pill">{{ rule.action }} · {{ rule.mode }}</span></td>
+        <td>
+          {% if disabled_until %}
+            <span class="muted">desactivada hasta {{ disabled_until.astimezone().strftime("%H:%M") }}</span>
+          {% elif running %}
+            <form class="inline" method="post" action="/rules/disable">
+              <input type="hidden" name="rule_id" value="{{ rule.id }}">
+              <button>Desactivar hoy</button>
+            </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+  </table>
+  <p class="muted">Veces que desactivaste algo: {{ disabled_today }} hoy · {{ disabled_week }} en 7 días.</p>
+</section>
+{% endif %}
+
+{% if view.focus_sessions %}
+<section class="card">
+  <h2>Focus sessions de hoy</h2>
+  <table>
+    {% for session in view.focus_sessions %}
+      <tr>
+        <td>{{ session.started_at.astimezone().strftime("%H:%M") }}</td>
+        <td>{{ session.planned_minutes }} min · {{ session.mode }}</td>
+        <td>{{ "completada" if session.completed else ("en curso" if session.ended_at is none else "terminada antes") }}</td>
+      </tr>
+    {% endfor %}
+  </table>
+</section>
+{% endif %}
+
+<section class="card">
+  <h2>Tus datos</h2>
+  <p class="muted">Exportar tiempo agregado por día y app (sin títulos de ventana):
+    <a href="/export.csv?days=7">CSV 7 días</a> · <a href="/export.json?days=7">JSON 7 días</a> · <a href="/export.csv?days=30">CSV 30 días</a></p>
+  <p class="muted">Nublock no guarda imágenes ni video: solo estados con timestamps. Puedes borrar todo el historial (los overrides de clasificación se mantienen).</p>
+  <form class="inline" method="post" action="/data/delete">
+    <input name="confirm" placeholder='escribe "BORRAR"' required>
+    <button>Borrar historial</button>
+  </form>
+</section>
+{% endblock %}
