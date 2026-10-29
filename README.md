@@ -30,33 +30,55 @@ Copia el config a su lugar (o usa `--config config/config.example.yaml` en cada 
 cp config/config.example.yaml ~/Library/Application\ Support/nublock/config.yaml
 ```
 
-## Instalar en otro Mac (sin terminal ni repo)
+## Instalar
 
-En un Mac con Apple Silicon (M1 o posterior) y macOS 14 Sonoma o posterior, en la terminal:
+Requisitos: Mac con Apple Silicon (M1 o posterior) y macOS 14 Sonoma o posterior. No hace falta
+instalar nada más: la app trae Python, las librerías y los modelos adentro.
+
+En la Terminal:
 
 ```bash
 curl -fsSL https://github.com/Diegolnt/Nublock/releases/latest/download/install.sh | sh
 ```
 
-Para desinstalar: `curl -fsSL https://github.com/Diegolnt/Nublock/releases/latest/download/uninstall.sh | sh` (agrega `-s -- --all` al final de
-`sh` para borrar también tu historial).
-
-**Publicar una versión nueva** (desarrollo): `python scripts/build_release.py` (descarga un Python
-relocatable y las dependencias; tarda unos minutos) y sube los 4 archivos de `dist/` a un
-release nuevo de GitHub (`Nublock-<versión>-macos-arm64.zip`, su `.sha256`, `install.sh`,
-`uninstall.sh`).
-
-La app trae Python, las librerías y los modelos adentro: el otro Mac no necesita nada instalado.
-No está firmada por Apple; por eso se instala con `curl` (lo que baja el browser queda en
-"cuarentena" y macOS lo bloquea). La release es para la arquitectura del Mac donde la
-construyes (arm64 = Apple Silicon).
-
-Al abrirse, Nublock muestra la ventana de permisos (también en el menú → *Permisos y
-configuración…*):
+Descarga Nublock, verifica que no esté corrupto, lo instala en `~/Applications/Nublock.app` y lo
+abre. Al abrirse muestra la ventana de permisos (también disponible en el menú de Nublock →
+*Permisos y configuración…*):
 
 ![Ventana de permisos](docs/img/permisos.png)
 
+No está firmada por Apple: por eso se instala con `curl`. Si descargas el zip con el browser,
+macOS lo deja "en cuarentena" y no deja abrir la app.
+
+## Desinstalar
+
+```bash
+# Borra la app, permisos, arranque al iniciar sesión y bloqueo de sitios (conserva tu historial)
+curl -fsSL https://github.com/Diegolnt/Nublock/releases/latest/download/uninstall.sh | sh
+
+# Igual, pero borra también tu historial, config y logs
+curl -fsSL https://github.com/Diegolnt/Nublock/releases/latest/download/uninstall.sh | sh -s -- --all
+```
+
+Dónde guarda Nublock sus archivos:
+
+| Dónde | Qué es |
+|---|---|
+| `~/Applications/Nublock.app` | La app |
+| `~/Library/Application Support/nublock/` | Config (`config.yaml`), historial (`nublock.db`) y calibración |
+| `~/Library/Logs/nublock/` | Logs |
+| `~/Library/LaunchAgents/local.nublock.autostart.plist` | Abrir al iniciar sesión (si lo activaste) |
+| `/Library/PrivilegedHelperTools/local.nublock.hosts.sh` y una sección de `/etc/hosts` | Bloqueo de sitios (si lo instalaste) |
+
+Todo queda en tu Mac: Nublock no envía nada a internet ni comparte datos entre computadores.
+
 ## Nublock como app desde el repo (desarrollo)
+
+**Publicar una versión nueva:** `python scripts/build_release.py` (descarga un Python
+relocatable y las dependencias; tarda unos minutos) y sube los 4 archivos de `dist/` a un
+release nuevo de GitHub (`Nublock-<versión>-macos-arm64.zip`, su `.sha256`, `install.sh`,
+`uninstall.sh`). La release sirve para la arquitectura del Mac donde la construyes.
+
 
 ```bash
 python -m nublock app install        # compila ~/Applications/Nublock.app (necesita xcode-select --install)
