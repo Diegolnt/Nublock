@@ -32,19 +32,19 @@ cp config/config.example.yaml ~/Library/Application\ Support/nublock/config.yaml
 
 ## Instalar en otro Mac (sin terminal ni repo)
 
-Construye la release una vez (descarga un Python relocatable y las dependencias; tarda unos
-minutos):
+En un Mac con Apple Silicon (M1 o posterior), en la terminal:
 
 ```bash
-python scripts/build_release.py --base-url https://tu-pagina.com/nublock
+curl -fsSL https://github.com/Diegolnt/Nublock/releases/latest/download/install.sh | sh
 ```
 
-Sube a esa URL los archivos de `dist/` (`Nublock-<versión>-macos-arm64.zip`, su `.sha256`,
-`install.sh`, `uninstall.sh`). Quien quiera instalar Nublock corre:
+Para desinstalar: `curl -fsSL https://github.com/Diegolnt/Nublock/releases/latest/download/uninstall.sh | sh` (agrega `-s -- --all` al final de
+`sh` para borrar también tu historial).
 
-```bash
-curl -fsSL https://tu-pagina.com/nublock/install.sh | sh
-```
+**Publicar una versión nueva** (desarrollo): `python scripts/build_release.py` (descarga un Python
+relocatable y las dependencias; tarda unos minutos) y sube los 4 archivos de `dist/` a un
+release nuevo de GitHub (`Nublock-<versión>-macos-arm64.zip`, su `.sha256`, `install.sh`,
+`uninstall.sh`).
 
 La app trae Python, las librerías y los modelos adentro: el otro Mac no necesita nada instalado.
 No está firmada por Apple; por eso se instala con `curl` (lo que baja el browser queda en

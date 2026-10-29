@@ -81,7 +81,8 @@ def run(command: list[str]) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument("--base-url", default="https://TU-PAGINA/nublock")
+    # releases/latest/download siempre apunta al release más nuevo de GitHub.
+    parser.add_argument("--base-url", default="https://github.com/Diegolnt/Nublock/releases/latest/download")
     args = parser.parse_args()
 
     arch = platform.machine()
